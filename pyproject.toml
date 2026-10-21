@@ -1,0 +1,148 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openai-agents-acgs"
+version = "0.1.0"
+description = "ACGS rule-based tool-call governance for OpenAI Agents SDK function tools, via tool guardrails and approvals"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Martin Lyu" }]
+keywords = ["openai-agents", "openai", "agents", "ai", "tool-guardrails", "human-in-the-loop", "tool-calls", "governance", "acgs"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+dependencies = [
+    "openai-agents>=0.22.1,<1",
+    "acgs-lite>=3.0.1,<4",
+]
+
+[project.urls]
+Homepage = "https://github.com/acgs-ai/openai-agents-acgs"
+Documentation = "https://github.com/acgs-ai/openai-agents-acgs#readme"
+Repository = "https://github.com/acgs-ai/openai-agents-acgs"
+Issues = "https://github.com/acgs-ai/openai-agents-acgs/issues"
+Changelog = "https://github.com/acgs-ai/openai-agents-acgs/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+test = [
+    "pytest>=8.0.0,<10.0.0",
+    "pytest-asyncio>=0.24.0,<2.0.0",
+    "pytest-cov>=6.0.0,<8.0.0",
+    "pytest-socket>=0.7.0,<1.0.0",
+]
+lint = ["ruff>=0.15.0,<0.16.0"]
+typing = ["mypy>=1.18.0,<2.0.0"]
+dev = [
+    { include-group = "test" },
+    { include-group = "lint" },
+    { include-group = "typing" },
+    "commitizen>=4.0.0,<5.0.0",
+    "pre-commit>=4.0.0,<5.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openai_agents_acgs"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "examples", "README.md", "CHANGELOG.md", "LICENSE", "pyproject.toml"]
+
+# Hatch environments install the same dependency groups as `uv sync` (uv.lock pins them for CI).
+[tool.hatch.envs.default]
+installer = "uv"
+dependency-groups = ["test", "lint", "typing"]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args}"
+cov = "pytest --cov --cov-report=term-missing {args}"
+lint = ["ruff check src tests examples", "ruff format --check src tests examples"]
+format = ["ruff check --fix --exit-zero src tests examples", "ruff format src tests examples"]
+fmt = ["format"]
+typecheck = "mypy"
+prepare = ["format", "lint", "typecheck", "cov"]
+
+# The oldest supported versions of openai-agents and acgs-lite. CI resolves the same set with
+# `uv pip install --resolution lowest-direct`.
+[tool.hatch.envs.min]
+template = "default"
+python = "3.10"
+extra-dependencies = ["openai-agents==0.22.1", "acgs-lite==3.0.1"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+include = ["src/**/*.py", "tests/**/*.py", "examples/**/*.py"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+    "A", "ANN", "ARG", "B", "BLE", "C4", "D", "E", "EM", "F", "FA", "FBT", "I", "N", "PERF", "PGH", "PIE", "PL",
+    "PT", "PYI", "RET", "RSE", "RUF", "S", "SIM", "SLF", "T10", "T20", "TC", "TID", "UP", "W",
+]
+ignore = [
+    "TC001", "TC002", "TC003",  # runtime imports keep the public API introspectable
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+# Shared verbatim with acgs-haystack, strands-acgs, langchain-acgs, crewai-acgs, adk-acgs and pydantic-ai-acgs,
+# which use Sphinx-style docstrings here.
+"src/openai_agents_acgs/_governance.py" = ["D212", "D205", "D415", "RUF100", "BLE001", "ANN401"]
+# Fail-closed: the guardrail catches every exception on purpose and rejects the call. The approval
+# policy signature `(run_context, params, call_id)` is fixed by the SDK.
+"src/openai_agents_acgs/guard.py" = ["BLE001", "ANN401", "ARG001"]
+"tests/**/*.py" = ["D", "S101", "PLR2004", "ANN401", "ARG", "SLF001", "FBT", "PLC0415", "EM101", "N802"]
+"examples/**/*.py" = ["T201", "D", "ARG", "ANN401", "PLR2004", "FBT"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src", "tests", "examples"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "src"]
+addopts = "--strict-markers --strict-config --doctest-modules --import-mode=importlib --disable-socket --allow-unix-socket"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "error",
+    "ignore::ImportWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["openai_agents_acgs"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "pep621"
+tag_format = "v$version"
+update_changelog_on_bump = true
+major_version_zero = true

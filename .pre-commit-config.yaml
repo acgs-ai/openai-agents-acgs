@@ -1,0 +1,42 @@
+default_install_hook_types: [pre-commit, commit-msg]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+  - repo: local
+    hooks:
+      - id: hatch-format
+        name: Format code (hatch run format)
+        entry: hatch run format
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: hatch-lint
+        name: Lint code (hatch run lint)
+        entry: hatch run lint
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: hatch-typecheck
+        name: Type check (hatch run typecheck)
+        entry: hatch run typecheck
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: hatch-test
+        name: Tests with coverage gate (hatch run cov)
+        entry: hatch run cov
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [pre-commit]
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.8.3
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
