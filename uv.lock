@@ -12,16 +12,16 @@ resolution-markers = [
 
 [[package]]
 name = "acgs-lite"
-version = "3.0.1"
+version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "pydantic" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1a/85/2bab82b8830545de7eb3071a58570e7c55815811748c373458cac99b6840/acgs_lite-3.0.1.tar.gz", hash = "sha256:2bb42f9ad064f266662bf2dd3bceaada39625166eebebb965a324ad31bd5ed2d", size = 1425908, upload-time = "2026-09-21T20:02:27.739Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fd/5c/21d70290b71415b0fd5f324e6662ba8e52cb1dae93ca6c71e1dcf2430a01/acgs_lite-4.0.0.tar.gz", hash = "sha256:e9834e302aba0a833c52c222346ebd28ad8ab3e08323f324dc316896d5bea16b", size = 1096606, upload-time = "2026-11-11T02:09:25.744Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0d/47/e5ca871add4a7bdaabde593513b8d5720255e20d92c2d0862f6def496549/acgs_lite-3.0.1-py3-none-any.whl", hash = "sha256:d87ae7dc4438e3c1a1736ecd58006b5387857d5b1a8e070a41d6bfb564b9b170", size = 1048993, upload-time = "2026-09-21T20:02:26.148Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/45/0da48f283bf7bf90b92bbba621b4fe284e7441249ec6b6f77b1a3bcad517/acgs_lite-4.0.0-py3-none-any.whl", hash = "sha256:b0c7a86952cc837551d46e01ceac35667f4f02ca2e7aa6d68593929f04ff9e97", size = 1311153, upload-time = "2026-11-11T02:09:23.901Z" },
 ]
 
 [[package]]
