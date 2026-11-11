@@ -33,7 +33,13 @@ The package is a thin adapter over the public `acgs-lite` API.
 pip install openai-agents-acgs
 ```
 
-Requires Python 3.10 or later, `openai-agents>=0.22.1,<1` and `acgs-lite>=3.0.1,<4`.
+Requires Python 3.10 or later, `openai-agents>=0.22.1,<1` and `acgs-lite>=3.0.1,<5`.
+
+acgs-lite 4 is a major release. Its production profile of `GovernedCallable` requires an Ed25519
+receipt signer, governed payloads are JSON-only, and `GovernedAgent` no longer passes per-call keyword arguments to
+rule conditions (see the [acgs-lite changelog](https://github.com/acgs-ai/acgs-lite/blob/main/CHANGELOG.md)). This
+adapter works with both majors, but a fresh environment installs the newest version allowed. To stay on 3.x, also
+require `"acgs-lite<4"`, for example `pip install openai-agents-acgs "acgs-lite<4"`.
 
 ## Usage
 
