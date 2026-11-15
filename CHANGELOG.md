@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## 0.2.0 (unreleased)
+
+### Added
+
+- Offline `examples/deny_and_audit.py`: one allowed and one denied OpenAI Agents SDK tool call, with an
+  application decision trail from the SDK's tool input guardrail results.
+- Regression coverage for nested JSON-native arguments and bytes/bytearray formatting against acgs-lite 4.0.0.
+
+### Changed
+
+- Prepare the adapter's 0.2.0 release candidate. The default test environment resolves acgs-lite 4.0.0;
+  the CI `test-min` job keeps testing the 3.0.1 floor. Runtime support remains `acgs-lite>=3.0.1,<5`.
+- Document the compatibility matrix and clarify that the adapter does not issue signed receipts.
+
 ## 0.1.0 (unreleased)
 
 ### Added
