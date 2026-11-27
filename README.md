@@ -211,6 +211,9 @@ refund-1: refunded 20.0 for A-17
 
    Each argument leaf is one `path: value` line (nested values use `a.b[0].c` paths), so both argument names and
    values are visible to rules. Whitespace inside values is collapsed so phrases split across lines still match.
+   A value that contains hidden control characters is also rendered with them removed and with
+   them as spaces. A value with more than one whitespace control character (vertical tab,
+   form feed, U+001C to U+001F, NEL) is denied.
    Identifiers written in `snake_case`, `kebab-case` or `camelCase` (the tool name, argument names, and
    single-token string values) are repeated as plain words on the `normalized:` line, so the keyword
    `skip audit` also matches a tool called `skip_audit`. Nothing is truncated.
