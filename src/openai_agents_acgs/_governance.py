@@ -44,8 +44,16 @@ _REVIEW_ACTIONS = frozenset({ViolationAction.REQUIRE_HUMAN_REVIEW, ViolationActi
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 _SEPARATORS = re.compile(r"[\s_\-./:\[\]]+")
-_IDENTIFIER_VALUE = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[_-][A-Za-z0-9]+|[A-Z][a-z0-9]+)+$")
+# Each separator group consumes at least one separator character, so the pattern cannot backtrack
+# over ambiguous splits of a run of letters and digits.
+_IDENTIFIER_VALUE = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:(?:[_-][A-Za-z0-9]+)+|[A-Z][a-z0-9]+)$")
 _MAX_IDENTIFIER_VALUE_LENGTH = 64
+# Control characters (Unicode category Cc) other than tab, newline and carriage return.
+_HIDDEN_CONTROLS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
+# The hidden controls that ``str.split()`` does not treat as whitespace.
+_NON_SPACE_CONTROLS = re.compile(r"[\x00-\x08\x0e-\x1b\x7f-\x84\x86-\x9f]")
+# The hidden controls that ``str.split()`` treats as whitespace.
+_SPACE_CONTROLS = re.compile(r"[\x0b\x0c\x1c-\x1f\x85]")
 
 
 class Verdict(str, Enum):  # noqa: UP042  # StrEnum needs Python 3.11; this module is shared with a 3.10 package
@@ -98,6 +106,43 @@ def _render_scalar(value: Any) -> str:
     return " ".join(str(value).split())
 
 
+def _readings_without_hidden_controls(value: Any, rendered: str) -> list[str]:
+    """
+    Render a leaf value that contains hidden control characters in the other ways it can be read.
+
+    Several control characters (vertical tab, form feed, U+001C to U+001F, NEL) count as whitespace
+    when a value is collapsed onto one line. One of them inside a word would split the word in two
+    and hide it from a keyword rule. Up to four more readings are produced: the whitespace controls and
+    the other controls are each either removed or turned into spaces.
+
+    With two or more of the whitespace controls, each one could be a separator or sit inside a word,
+    and no fixed set of readings covers every combination. Such a value is rejected.
+
+    :returns: The readings that differ from ``rendered``, without duplicates.
+    :raises ValueError: If the value contains more than one whitespace control character.
+    """
+    if value is None or isinstance(value, bool | int | float):
+        return []
+    text = value if isinstance(value, str) else str(value)
+    if not _HIDDEN_CONTROLS.search(text):
+        return []
+    if len(_SPACE_CONTROLS.findall(text)) > 1:
+        msg = "A tool call argument contains more than one whitespace control character."
+        raise ValueError(msg)
+    readings: list[str] = []
+    candidates = (
+        _NON_SPACE_CONTROLS.sub("", text),
+        _HIDDEN_CONTROLS.sub("", text),
+        _HIDDEN_CONTROLS.sub(" ", text),
+        _NON_SPACE_CONTROLS.sub(" ", _SPACE_CONTROLS.sub("", text)),
+    )
+    for candidate in candidates:
+        reading = " ".join(candidate.split())
+        if reading != rendered and reading not in readings:
+            readings.append(reading)
+    return readings
+
+
 def _flatten(value: Any, path: str, depth: int) -> Iterator[tuple[str, Any]]:
     """Yield ``(dotted_path, leaf_value)`` pairs for nested mappings and sequences."""
     if depth > MAX_ARGUMENT_DEPTH:
@@ -125,7 +170,8 @@ def format_tool_call(tool_name: str, arguments: Any) -> str:
     Render a tool call as the text that ACGS keyword and pattern rules are matched against.
 
     The output has one ``path: value`` line per argument leaf, so argument names and values are
-    both visible to rules, and multi-line values are collapsed onto one line. Identifiers
+    both visible to rules, and multi-line values are collapsed onto one line. A value that contains
+    hidden control characters is rendered again with those characters removed and as spaces. Identifiers
     (the tool name, argument names and single-token string values) that contain separators or
     camelCase are repeated in a trailing ``normalized:`` line as plain words, so that a rule
     keyword such as ``skip audit`` also matches a tool named ``skip_audit``.
@@ -142,7 +188,9 @@ def format_tool_call(tool_name: str, arguments: Any) -> str:
     :param tool_name: Name of the tool the model wants to call.
     :param arguments: The tool arguments, usually a mapping. Other values are rendered as ``input``.
     :returns: The text passed to ``GovernanceEngine.validate``.
-    :raises ValueError: If the arguments are nested deeper than ``MAX_ARGUMENT_DEPTH``.
+    :raises ValueError: If the arguments are nested deeper than ``MAX_ARGUMENT_DEPTH``, or a value
+        contains more than one whitespace control character (vertical tab, form feed, U+001C to
+        U+001F, NEL).
     """
     lines = [f"tool: {tool_name}", "arguments:"]
     identifiers = [tool_name]
@@ -153,14 +201,15 @@ def format_tool_call(tool_name: str, arguments: Any) -> str:
         lines.append("(none)")
     for path, leaf in leaves:
         rendered = _render_scalar(leaf)
-        lines.append(f"{path}: {rendered}")
+        readings = [rendered, *_readings_without_hidden_controls(leaf, rendered)]
+        lines.extend(f"{path}: {reading}" for reading in readings)
         identifiers.append(path)
-        if (
-            isinstance(leaf, str)
-            and len(rendered) <= _MAX_IDENTIFIER_VALUE_LENGTH
-            and _IDENTIFIER_VALUE.match(rendered)
-        ):
-            identifiers.append(rendered)
+        if isinstance(leaf, str):
+            identifiers.extend(
+                reading
+                for reading in readings
+                if len(reading) <= _MAX_IDENTIFIER_VALUE_LENGTH and _IDENTIFIER_VALUE.match(reading)
+            )
     normalized: list[str] = []
     for identifier in identifiers:
         words = _humanize(identifier)
